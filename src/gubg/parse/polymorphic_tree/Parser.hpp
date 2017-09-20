@@ -42,6 +42,8 @@ struct Parser : private tree::Parser_crtp<Parser>
 {
 #define HANDLE(VAL) { if (VAL != ReturnCode::OK) { handle_error(VAL); return false; } }
 
+    virtual ~Parser() {}
+
     bool set_root(Element * element)
     {
         MSS_BEGIN(bool);
@@ -56,6 +58,8 @@ struct Parser : private tree::Parser_crtp<Parser>
     {
         MSS_BEGIN(bool);
         MSS(!!root_);
+        MSS(elements_.empty());
+        is_parsing_ = true;
 
         HANDLE(root_->on_open());
 
@@ -67,8 +71,12 @@ struct Parser : private tree::Parser_crtp<Parser>
         }
 
         HANDLE(root_->on_close());
+
+        is_parsing_ = false;
         MSS_END();
     }
+
+    const std::list<std::string> & current_path() const { return current_path_; }
 
 private:
     virtual void handle_error(ReturnCode code)
@@ -80,8 +88,6 @@ private:
 
         std::cout << "]" << std::endl;
     }
-
-
 
     friend class tree::Parser_crtp<Parser>;
 
@@ -181,6 +187,8 @@ private:
 
     std::ostringstream text_;
     bool is_parsing_ = false;
+
+#undef HANDLE
 };
 
 

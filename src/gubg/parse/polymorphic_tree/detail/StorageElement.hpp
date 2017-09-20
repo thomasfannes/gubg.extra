@@ -58,7 +58,7 @@ private:
 
 
 template <typename ParentNodeType, typename ChildNodeType, typename Functor> struct SingleStorageElement
-        : public NodeStorageElement<ParentNodeType, ChildNodeType>
+        : public virtual NodeStorageElement<ParentNodeType, ChildNodeType>
 {
     explicit SingleStorageElement(const Functor & functor)
         : functor_(functor)

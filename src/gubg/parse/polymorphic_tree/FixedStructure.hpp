@@ -8,7 +8,7 @@
 namespace gubg { namespace parse { namespace polymorphic_tree {
 
 template <typename NodeType>
-class FixedStructureElement : public Element
+class FixedStructureElement : public virtual Element
 {
 public:
     ~FixedStructureElement()
@@ -23,6 +23,8 @@ public:
     virtual ReturnCode on_open() override
     {
         MSS_BEGIN(ReturnCode);
+
+        value_ = NodeType();
 
         for(auto & p : attribute_parsers_)
             PROPAGATE(p.second->reset());
@@ -55,7 +57,7 @@ public:
         MSS_END();
     }
 
-    virtual ReturnCode on_child_close(Element * handler) override
+    virtual ReturnCode on_child_close(Element * /*handler*/) override
     {
         MSS_BEGIN(ReturnCode);
         MSS_END();

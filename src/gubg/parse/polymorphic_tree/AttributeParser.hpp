@@ -12,6 +12,8 @@ namespace gubg { namespace parse { namespace polymorphic_tree {
 template <typename NodeType>
 struct AttributeParser
 {
+    virtual ~AttributeParser() {}
+
     virtual ReturnCode process(const std::string & value, NodeType & vt) = 0;
     virtual ReturnCode valid() const = 0;
     virtual ReturnCode reset() = 0;

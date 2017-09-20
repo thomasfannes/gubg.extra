@@ -2,6 +2,7 @@
 #define HEADER_gubg_parse_polymorphic_tree_ReturnCode_hpp_ALREADY_INCLUDED
 
 #include <ostream>
+#include <sstream>
 
 namespace gubg { namespace parse { namespace polymorphic_tree {
 
@@ -18,7 +19,7 @@ enum class ReturnCode
     Attribute_MultipleInTree,
 };
 
-std::ostream & operator<<(std::ostream & str, ReturnCode code)
+inline std::ostream & operator<<(std::ostream & str, ReturnCode code)
 {
     switch(code)
     {
@@ -38,6 +39,13 @@ std::ostream & operator<<(std::ostream & str, ReturnCode code)
     }
 
     return str;
+}
+
+inline std::string to_string(ReturnCode code)
+{
+    std::ostringstream str;
+    str << code;
+    return str.str();
 }
 
 } } }
