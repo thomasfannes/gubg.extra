@@ -42,7 +42,8 @@ struct Parser : private tree::Parser_crtp<Parser>
 {
 #define HANDLE(VAL) { if (VAL != ReturnCode::OK) { handle_error(VAL); return false; } }
 
-    virtual ~Parser() {}
+    Parser() {}
+    virtual ~Parser() { delete root_; }
 
     bool set_root(Element * element)
     {
@@ -53,6 +54,8 @@ struct Parser : private tree::Parser_crtp<Parser>
         root_ = element;
         MSS_END();
     }
+
+    Element * root() const { return root_; }
 
     bool process(const std::string & content)
     {
@@ -79,6 +82,9 @@ struct Parser : private tree::Parser_crtp<Parser>
     const std::list<std::string> & current_path() const { return current_path_; }
 
 private:
+    Parser(const Parser &) = delete;
+    Parser & operator=(const Parser &) = delete;
+
     virtual void handle_error(ReturnCode code)
     {
         std::cout << "Error: " << code << " in tree at [";
