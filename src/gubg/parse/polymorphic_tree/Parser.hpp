@@ -2,6 +2,7 @@
 #define HEADER_gubg_parse_polymorphic_tree_Parser_hpp_ALREADY_INCLUDED
 
 #include "gubg/parse/polymorphic_tree/ReturnCode.hpp"
+#include "gubg/parse/polymorphic_tree/ElementParser.hpp"
 #include "gubg/parse/tree/Parser.hpp"
 #include "gubg/mss.hpp"
 #include <stack>
@@ -11,60 +12,25 @@
 
 namespace gubg { namespace parse { namespace polymorphic_tree {
 
-class Parser;
-
-class Element
+class Parser : private tree::Parser_crtp<Parser>
 {
 public:
-    Element() {}
-
-    virtual ~Element() = 0;
-
-private:
-    friend class Parser;
-
-    virtual ReturnCode on_open() = 0;
-    virtual ReturnCode on_close() = 0;
-
-    virtual ReturnCode on_child_open(Element *& handler, const std::string & tag) = 0;
-    virtual ReturnCode on_child_close(Element * handler) = 0;
-
-    virtual ReturnCode on_attribute(const std::string & key, const std::string & value) = 0;
-    virtual ReturnCode on_attributes_handled() { return ReturnCode::OK; }
-};
-
-inline Element::~Element()
-{
-
-}
-
-struct Parser : private tree::Parser_crtp<Parser>
-{
-#define HANDLE(VAL) { if (VAL != ReturnCode::OK) { handle_error(VAL); return false; } }
+    using ElementPtr = std::shared_ptr<ElementParser>;
 
     Parser() {}
-    virtual ~Parser() { delete root_; }
 
-    bool set_root(Element * element)
+    void set_root(ElementPtr element)
     {
-        MSS_BEGIN(bool);
-        MSS(is_parsing_ == false);
-        MSS(elements_.empty());
-        MSS(!root_);
         root_ = element;
-        MSS_END();
     }
-
-    Element * root() const { return root_; }
 
     bool process(const std::string & content)
     {
         MSS_BEGIN(bool);
         MSS(!!root_);
         MSS(elements_.empty());
-        is_parsing_ = true;
-
-        HANDLE(root_->on_open());
+        root_->on_open();
+        push_(root_);
 
         bool success = Parser_crtp<Parser>::process(content);
         if(!success)
@@ -73,27 +39,18 @@ struct Parser : private tree::Parser_crtp<Parser>
             return false;
         }
 
-        HANDLE(root_->on_close());
+        error_ = root_->on_close();
+        MSS(error_);
 
-        is_parsing_ = false;
         MSS_END();
     }
 
     const std::list<std::string> & current_path() const { return current_path_; }
+    ReturnCode error_code() const { return error_; }
 
 private:
     Parser(const Parser &) = delete;
     Parser & operator=(const Parser &) = delete;
-
-    virtual void handle_error(ReturnCode code)
-    {
-        std::cout << "Error: " << code << " in tree at [";
-
-        for(auto it = current_path_.begin(); it != current_path_.end(); ++it)
-            std::cout << (it != current_path_.begin() ? "/" : "") << *it;
-
-        std::cout << "]" << std::endl;
-    }
 
     friend class tree::Parser_crtp<Parser>;
 
@@ -109,14 +66,19 @@ private:
 
         current_path_.push_back(tag);
 
-        Element * handler = nullptr;
-        MSS(!!top_());
-        HANDLE(top_()->on_child_open(handler, tag));
+        ElementPtr child = nullptr;
 
-        push_(handler);
-        MSS(!!handler);
+        ElementPtr parent = top_();
+        if (parent)
+        {
+            error_ = parent->on_child_open(child, tag);
+            MSS(error_);
+        }
 
-        HANDLE(handler->on_open());
+        push_(child);
+
+        if (child)
+            child->on_open();
 
         MSS_END();
     }
@@ -126,10 +88,13 @@ private:
         MSS_BEGIN(bool);
 
         // close the current open
-        HANDLE(top_()->on_close());
+        ElementPtr child = pop_();
 
-        Element * handler = pop_();
-        HANDLE(top_()->on_child_close(handler));
+        if(child)
+        {
+            error_ = child->on_close();
+            MSS(error_);
+        }
 
         current_path_.pop_back();
 
@@ -142,7 +107,12 @@ private:
 
         current_path_.push_back(key);
 
-        HANDLE(top_()->on_attribute(key, value));
+        ElementPtr cur = top_();
+        if(cur)
+        {
+            error_ = cur->on_attribute(key, value);
+            MSS(error_);
+        }
 
         current_path_.pop_back();
         MSS_END();
@@ -152,27 +122,32 @@ private:
     {
         MSS_BEGIN(bool);
 
-        HANDLE(top_()->on_attributes_handled());
+        ElementPtr cur = top_();
+        if (cur)
+        {
+            error_ = cur->on_attributes_handled();
+            MSS(error_);
+        }
+
         MSS_END();
     }
 
-    Element * pop_()
+    ElementPtr pop_()
     {
         assert(!elements_.empty());
-        Element * cur = elements_.top();
+
+        ElementPtr cur = elements_.top();
         elements_.pop();
         return cur;
     }
 
-    Element * top_()
+    ElementPtr top_()
     {
-        if(elements_.empty())
-            return root_;
-        else
-            return elements_.top();
+        assert(!elements_.empty());
+        return elements_.top();
     }
 
-    void push_(Element * element)
+    void push_(ElementPtr element)
     {
         elements_.push(element);
     }
@@ -181,20 +156,18 @@ private:
     {
         while(!elements_.empty())
         {
-            Element * handler = pop_();
-            top_()->on_child_close(handler);
+            ElementPtr handler = pop_();
+            if (handler)
+                handler->on_close();
         }
     }
 
+    std::stack<ElementPtr> elements_;
+    ElementPtr root_;
+
     std::list<std::string> current_path_;
-    std::stack<Element *> elements_;
-    Element * root_ = nullptr;
-
-
+    ReturnCode error_;
     std::ostringstream text_;
-    bool is_parsing_ = false;
-
-#undef HANDLE
 };
 
 
