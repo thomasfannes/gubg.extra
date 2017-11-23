@@ -3,7 +3,7 @@
 
 #include "gubg/parse/polymorphic_tree/ReturnCode.hpp"
 #include "gubg/parse/polymorphic_tree/ElementParser.hpp"
-#include "gubg/parse/tree/Parser.hpp"
+#include "gubg/parse/naft/Parser.hpp"
 #include "gubg/mss.hpp"
 #include <stack>
 #include <list>
@@ -12,7 +12,7 @@
 
 namespace gubg { namespace parse { namespace polymorphic_tree {
 
-class Parser : private tree::Parser_crtp<Parser>
+class Parser : private naft::Parser_crtp<Parser>
 {
 public:
     using ElementPtr = std::shared_ptr<ElementParser>;
@@ -92,15 +92,15 @@ private:
     Parser(const Parser &) = delete;
     Parser & operator=(const Parser &) = delete;
 
-    friend class tree::Parser_crtp<Parser>;
+    friend class naft::Parser_crtp<Parser>;
 
-    bool tree_text(const std::string & text)
+    bool naft_text(const std::string & text)
     {
         text_ << text;
         return true;
     }
 
-    bool tree_node_open(const std::string & tag)
+    bool naft_node_open(const std::string & tag)
     {
         MSS_BEGIN(bool);
 
@@ -123,7 +123,7 @@ private:
         MSS_END();
     }
 
-    bool tree_node_close()
+    bool naft_node_close()
     {
         MSS_BEGIN(bool);
 
@@ -141,7 +141,7 @@ private:
         MSS_END();
     }
 
-    bool tree_attr(const std::string & key, const std::string & value)
+    bool naft_attr(const std::string & key, const std::string & value)
     {
         MSS_BEGIN(bool);
 
@@ -158,7 +158,7 @@ private:
         MSS_END();
     }
 
-    bool tree_attr_done()
+    bool naft_attr_done()
     {
         MSS_BEGIN(bool);
 
